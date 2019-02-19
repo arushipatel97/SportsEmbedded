@@ -1,7 +1,7 @@
 import cv2
 import numpy as np
 
-original = cv2.imread('pro2_2.jpg')
+original = cv2.imread('pro/pro1.jpg')
 height, width, depth = original.shape
 ratio = height/width
 nHeight = 500
@@ -21,7 +21,6 @@ mask = cv2.inRange(hsv, greenLower, greenUpper)
 mask = cv2.erode(mask, None, iterations=2)
 mask = cv2.dilate(mask, None, iterations=2)
 
-
 im2,contours,hierarchy = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
 if len(contours) != 0:
 	# isolate field
@@ -31,38 +30,33 @@ if len(contours) != 0:
     disp = img[y:y+h, x:x+w]
     mask = mask[y:y+h, x:x+w]
     cv2.imshow("cropped", crop_img)
-	gray_crop_img = cv2.cvtColor(crop_img,cv2.COLOR_BGR2GRAY)
+    gray_crop_img = cv2.cvtColor(crop_img,cv2.COLOR_BGR2GRAY)
 
-# adaptiveThreshold to find white lines
-th3 = cv2.adaptiveThreshold(gray_crop_img,255,cv2.ADAPTIVE_THRESH_MEAN_C,\
-            cv2.THRESH_BINARY,301,-20)
+res1 = cv2.bitwise_and(gray_crop_img,gray_crop_img,mask = mask)
+res2 = cv2.adaptiveThreshold(res1,255,cv2.ADAPTIVE_THRESH_GAUSSIAN_C,\
+            cv2.THRESH_BINARY,3,-5)
+res = cv2.dilate(res2, None, iterations=1)
+res = cv2.erode(res, None, iterations=1)
+# res = cv2.Canny(res2,50,150,apertureSize = 5)
 
-# if portion of field identified is small, dialte more to find lines
-if w/nWidth < 0.5:
-	print("inside")
-	print(w/nWidth)
-	th3 = cv2.dilate(th3, None, iterations=2)
+# res = res2
 
-# only look for lines in the field
-mask = cv2.dilate(mask, None, iterations=1)
-res = cv2.bitwise_and(th3,th3,mask = mask)
-# res = cv2.dilate(res, None, iterations=1)
-
-
-minLineLength = 1
-maxLineGap = 2
-lines = cv2.HoughLinesP(res,1,np.pi/180,6,minLineLength,maxLineGap)
+minLineLength = 30
+maxLineGap = 10
+lines = cv2.HoughLinesP(res2,1,np.pi/180,18,minLineLength,maxLineGap)
+# lines = cv2.HoughLines(res,1,np.pi/180,80)
 for line in lines:
     for x1,y1,x2,y2 in line:
     	cv2.line(disp,(x1,y1),(x2,y2),(0,255,0),1)
 
 cv2.imshow('res',res)
+cv2.imshow('res1',res1)
+cv2.imshow('res2',res2)
 cv2.imshow('original',img)
-cv2.imshow('threshold',th3)
+# cv2.imshow('threshold',th3)
 cv2.imshow('hsv',mask)
 cv2.waitKey(0)
 cv2.destroyAllWindows()
-
 
 # g = cv2.cvtColor(green_image, cv2.COLOR_BGR2GRAY)
 # (channel_b, channel_g, channel_r) = cv2.split(img)
