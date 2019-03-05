@@ -1,7 +1,17 @@
 import cv2
 import numpy as np
+import math
 
-original = cv2.imread('pro/pro1.jpg')
+def slope(x1, y1, x2, y2):
+    m = 0
+    b = (x2 - x1)
+    d = (y2 - y1)
+    if b != 0:
+        m = (d)/(b) 
+
+    return m
+
+original = cv2.imread('pro/pro5.jpg')
 height, width, depth = original.shape
 ratio = height/width
 nHeight = 1000
@@ -33,27 +43,44 @@ if len(contours) != 0:
     gray_crop_img = cv2.cvtColor(crop_img,cv2.COLOR_BGR2GRAY)
 
 res1 = cv2.bitwise_and(gray_crop_img,gray_crop_img,mask = mask)
-res2 = cv2.adaptiveThreshold(res1,255,cv2.ADAPTIVE_THRESH_GAUSSIAN_C,\
+res5 = cv2.adaptiveThreshold(res1,255,cv2.ADAPTIVE_THRESH_GAUSSIAN_C,\
             cv2.THRESH_BINARY,3,-5)
-res = cv2.dilate(res2, None, iterations=2)
-res = cv2.erode(res, None, iterations=1)
+res5 = cv2.blur(res5,(3,3),0)
+r = cv2.dilate(res5, None, iterations=1)
+r = cv2.blur(r,(5,5))
+r = cv2.Canny(r, 100, 170, apertureSize = 3)
+r = cv2.erode(r, None, iterations=0)
+r = cv2.dilate(r, None, iterations=2)
+r = cv2.erode(r, None, iterations=3)
+r = cv2.Canny(r, 100, 170, apertureSize = 3)
 
-# res = res2
-res2 = cv2.blur(res2,(3,3))
+res = cv2.dilate(res5, None, iterations=4)
+res = cv2.erode(res, None, iterations=2)
 
-minLineLength = 100000
-maxLineGap = 100
-lines = cv2.HoughLinesP(res,1,np.pi/180,50,minLineLength,maxLineGap)
-# lines = cv2.HoughLines(res,1,np.pi/180,80)
+res2 = cv2.dilate(res5, None, iterations=1) 
+
+lines = cv2.HoughLinesP(res2,rho = 1,theta = 1*np.pi/180,threshold = 100,minLineLength = 100,maxLineGap = 10)
+count = 0
+slopes = {0}
 print(len(lines))
-# for line in lines:
-#     for x1,y1,x2,y2 in line:
-#     # x1,y1,x2,y2 = line[0]
-#     	cv2.line(disp,(x1,y1),(x2,y2),(255,0,0),2)
-a,b,c = lines.shape
-for i in range(a):
-    cv2.line(disp, (lines[i][0][0], lines[i][0][1]), (lines[i][0][2], lines[i][0][3]), (0, 0, 255), 3, cv2.LINE_AA)
+for line in lines:
+    for x1,y1,x2,y2 in line:
+    	diff = True
+    	m = slope(x1, y1, x2, y2)
+    	# print(m)
+    	dist = math.hypot(x2 - x1, y2 - y1)
+    	if dist > 10 and abs(m) > 0.00:
+    		for s in slopes:
+    			if (abs(s-m) < 0.08):
+    				print(m)
+    				diff = False
+    		if (diff == True):
+	    		count+=1
+	    		slopes.add(m)
+	    		cv2.line(disp,(x1,y1),(x2,y2),(255,0,0),2)
 
+print(slopes)
+print(len(slopes))
 cv2.imshow('res',res)
 cv2.imshow('res1',res1)
 cv2.imshow('res2',res2)
@@ -61,16 +88,10 @@ cv2.imshow('original',img)
 # cv2.imshow('threshold',th3)
 cv2.imshow('hsv',mask)
 cv2.waitKey(0)
+cv2.imwrite("r.png", r)
+cv2.imwrite("res1.png", res1)
 cv2.imwrite("final.png", disp)
 cv2.imwrite("res2.png", res2)
+cv2.imwrite("res5.png", res5)
 cv2.imwrite("res.png", res)
 cv2.destroyAllWindows()
-
-# g = cv2.cvtColor(green_image, cv2.COLOR_BGR2GRAY)
-# (channel_b, channel_g, channel_r) = cv2.split(img)
-# grayscaled = cv2.GaussianBlur(grayscaled,(1,1),0)
-# th = cv2.adaptiveThreshold(channel_g, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY, 55, 1)
-
-# threshold = 6
-# minLineLength = 10
-# lines = cv2.HoughLinesP(th3, 1, np.pi/180, threshold, 0, minLineLength, 20);
